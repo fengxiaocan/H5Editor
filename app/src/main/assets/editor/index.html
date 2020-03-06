@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href="assets/quill/quill.core.css" rel="stylesheet">
+    <link href="assets/editor.css" rel="stylesheet">
+    <title>Editor</title>
+    <script>
+        window.styleModeChange = function(isNightMode) {
+            if (isNightMode) { document.body.classList.add('theme-dark'); }
+            else { document.body.classList.remove('theme-dark'); }
+        };
+    </script>
+</head>
+<body>
+    <script>
+        window.styleModeChange(navigator.userAgent.indexOf('isNightMode') > 0);
+    </script>
+    <div id="cover-container">
+        <div id="cover-tip">
+            <i class="icon"></i>
+            <label>上传封面</label>
+            <span class="retry-button"><i></i><b>重传</b></span>
+        </div>
+        <div class="mask"></div>
+    </div>
+    <div id="title-container">
+        <div id="title-editor" contenteditable="true" placeholder="标题（最多40个字）"></div>
+        <div id="title-tip"></div>
+    </div>
+    <div class="container-separator"></div>
+    <div id="editor-container"></div>
+    <script src="assets/quill/quill.js"></script>
+    <script src="assets/jquery/jquery.min.js"></script>
+    <script src="assets/androidcall.js"></script>
+    <script src="assets/editor.js"></script>
+</body>
+</html>
