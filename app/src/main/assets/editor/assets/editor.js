@@ -125,7 +125,7 @@ class ImageBlot extends BlockEmbed {
                     placeholder: '不超过120字',
                     maxLength: 120,
                 };
-                let desc = prompt(JSON.stringify(message), _this.$figcaption.text());
+                let desc = promptformatText(JSON.stringify(message), _this.$figcaption.text());
                 if (desc != null) {
                     desc = $.trim(desc);
                     if (desc.length > 120) {
@@ -300,6 +300,7 @@ quill.ext = {
     setPlaceholder: function (text) {
         document.getElementById("editor-container").firstChild.setAttribute('data-placeholder', text);
     },
+    //插入分割线
     insertDivider: function () {
         let range = quill.getSelection();
         if (range == null ) {
@@ -319,6 +320,7 @@ quill.ext = {
             quill.setSelection(range.index + 2, Quill.sources.SILENT);
         }
     },
+    //获取内容
     getContent: function () {
         // "coverURL": "blob:null/10511637-bb61-4376-91e8-3f381ed7d19f",
         // "coverURL": "data:image/png;base64,XXX...XXX",
@@ -386,6 +388,7 @@ quill.ext = {
             bodyHTML: $content.html()
         };
     },
+    //设置内容
     setContent: function (obj) {
         if (obj.coverURL && obj.coverURL !== "") {
             coverImageManager.updateUI(1, obj.coverURL);
@@ -416,6 +419,7 @@ quill.ext = {
         let html = $content.html().replace(/<p><br><\/p>/g,"<br>");
         quill.pasteHTML(html);
     },
+    //获取当前的输入焦点
     getFocusInputName: function () {
         if ($('#title-editor').is(':focus')) {
             return 'title';
@@ -425,6 +429,7 @@ quill.ext = {
             return null;
         }
     },
+    //插入图片
     insertImage: function () {
         let _this = this;
         choosePicture({
@@ -452,6 +457,7 @@ quill.ext = {
             }
         });
     },
+    //插入图片
     _insertImage: function (url, alt, file) {
         let range = quill.getSelection(true);
         quill.insertText(range.index, '\n', Quill.sources.USER);
@@ -459,7 +465,7 @@ quill.ext = {
         quill.setSelection(range.index + 2, Quill.sources.SILENT);
     }
 };
-
+//选择图片
 function choosePicture(options) {
     let fileInput = document.getElementById('image-input');
     if (!fileInput) {
@@ -486,7 +492,7 @@ function choosePicture(options) {
 
     fileInput.click();
 }
-
+//上传图片
 function uploadPicture(options) {
     let formData = new FormData();
     let fileExtension = options.file.name.split('.')[1];
@@ -772,5 +778,6 @@ let native = {
     },
     callback: function (json) {
         // ...
+        disposeAndroidCallback(json)
     }
 };
