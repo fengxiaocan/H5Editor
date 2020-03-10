@@ -1,54 +1,63 @@
 package com.app.h5editor;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.luck.picture.lib.PictureSelector;
-import com.luck.picture.lib.config.PictureConfig;
 import com.luck.picture.lib.config.PictureMimeType;
+import com.luck.picture.lib.entity.LocalMedia;
 
+import static com.app.h5editor.MainActivity.JSInterface.CHOOSE_PICTURE;
 import static com.app.h5editor.MainActivity.JSInterface.FORMAT_BOLD;
+import static com.app.h5editor.MainActivity.JSInterface.FORMAT_UNBOLD;
 import static com.app.h5editor.MainActivity.JSInterface.INSER_DIVIDER;
 import static com.app.h5editor.MainActivity.JSInterface.REMOVE_FOCUS;
 
 /**
- *  编辑器网址:https://quilljs.com
+ * 编辑器网址:https://quilljs.com
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity{
 
     private WebView mWebView;
     private TextView tvBold;
     private TextView tvPhoto;
     private TextView tvLine;
     private TextView tvHide;
+    private LinearLayout mLayoutBottom;
+    private boolean isTextBold = false;
+    private ValueCallback<Uri[]> fileChooseCallback = null;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         initView();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0x123);
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},0x123);
         }
 
         initData();
+
     }
 
-    private void initData() {
+    private void initData(){
         WebSettings webSetting = mWebView.getSettings();
         webSetting.setDisplayZoomControls(false);
         webSetting.setAllowUniversalAccessFromFileURLs(true);
@@ -82,62 +91,155 @@ public class MainActivity extends AppCompatActivity {
         //需要支持多窗体还需要重写WebChromeClient.onCreateWindow
         webSetting.setSupportMultipleWindows(false);
 
-        mWebView.addJavascriptInterface(new JSInterface(this), "AndroidEditor");
+        mWebView.addJavascriptInterface(new JSInterface(),"AndroidEditor");
         //2.解决https与http混加载问题
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
             webSetting.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
+        mWebView.setWebChromeClient(new WebChromeClient(){
+            @Override
+            public boolean onShowFileChooser(WebView webView,
+                    ValueCallback<Uri[]> filePathCallback,
+                    FileChooserParams fileChooserParams)
+            {
+                Log.e("noah","getMode=" + fileChooserParams.getMode());
+                fileChooseCallback = filePathCallback;
+                PictureSelector.create(MainActivity.this).openGallery(PictureMimeType.ofImage()).
+                        loadImageEngine(GlideEngine.createGlideEngine())//请参考演示GlideEngine.java
+                               .forResult(result -> {
+                                   Log.e("noah","forResult");
+                                   if(result == null || result.size() == 0){
+                                       filePathCallback.onReceiveValue(new Uri[1]);
+                                   } else{
+                                       Uri[] value = new Uri[result.size()];
+                                       for(int i = 0;i < result.size();i++){
+                                           LocalMedia media = result.get(i);
+                                           value[i] = Uri.parse(media.getPath());
+                                       }
+                                       filePathCallback.onReceiveValue(value);
+                                   }
+                                   fileChooseCallback = null;
+                               });
+                return true;
+            }
+        });
         mWebView.loadUrl("file:///android_asset/editor/index.html");
     }
 
-    private void initView() {
-        mWebView = findViewById(R.id.web_view);
-
-        tvBold = (TextView) findViewById(R.id.tv_bold);
-        tvPhoto = (TextView) findViewById(R.id.tv_photo);
-        tvLine = (TextView) findViewById(R.id.tv_line);
-        tvHide = (TextView) findViewById(R.id.tv_hide);
-        tvBold.setOnClickListener(v -> mWebView.evaluateJavascript(FORMAT_BOLD, null));
-        tvPhoto.setOnClickListener(v -> {
+    @Override
+    protected void onResume(){
+        super.onResume();
+        if(fileChooseCallback != null){
+            Log.e("noah","onResume");
+            fileChooseCallback.onReceiveValue(null);
         }
-        );
+    }
+
+    private void initView(){
+        mWebView = findViewById(R.id.web_view);
+        mLayoutBottom = findViewById(R.id.layout_bottom);
+        tvBold = findViewById(R.id.tv_bold);
+        tvPhoto = findViewById(R.id.tv_photo);
+        tvLine = findViewById(R.id.tv_line);
+        tvHide = findViewById(R.id.tv_hide);
+        tvBold.setOnClickListener(v -> {
+            isTextBold = ! isTextBold;
+            if(isTextBold){
+                mWebView.evaluateJavascript(FORMAT_BOLD,null);
+            } else{
+                mWebView.evaluateJavascript(FORMAT_UNBOLD,null);
+            }
+            tvBold.getPaint().setFakeBoldText(isTextBold);
+            tvBold.postInvalidate();
+        });
+        tvPhoto.setOnClickListener(v -> {
+            mWebView.evaluateJavascript(CHOOSE_PICTURE,null);
+        });
 
         //添加分割线
-        tvLine.setOnClickListener(v -> mWebView.evaluateJavascript(INSER_DIVIDER, null));
+        tvLine.setOnClickListener(v -> mWebView.evaluateJavascript(INSER_DIVIDER,null));
         tvHide.setOnClickListener(v -> {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.showSoftInput(mWebView, InputMethodManager.SHOW_FORCED);
-            imm.hideSoftInputFromWindow(mWebView.getWindowToken(), 0); //强制隐藏键盘
-            mWebView.evaluateJavascript(REMOVE_FOCUS, null);
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.showSoftInput(mWebView,InputMethodManager.SHOW_FORCED);
+            imm.hideSoftInputFromWindow(mWebView.getWindowToken(),0); //强制隐藏键盘
+            mWebView.evaluateJavascript(REMOVE_FOCUS,null);
+            mLayoutBottom.setVisibility(View.GONE);
         });
     }
 
-    public static class JSInterface {
+    public class JSInterface{
         //插入分割线
         public static final String INSER_DIVIDER = "javascript:quill.ext.insertDivider();";
         //把文本格式化为粗体
-        public static final String FORMAT_BOLD = "javascript:quill.getSelection().formatText('bold', true);";
+        public static final String FORMAT_BOLD = "javascript:quill.ext.formatTextBold(true);";
+        //把文本格式化为正常体
+        public static final String FORMAT_UNBOLD = "javascript:quill.ext.formatTextBold(false);";
+        //选择图片
+        public static final String CHOOSE_PICTURE = "javascript:quill.ext.insertImage();";
         //移除焦点
         public static final String REMOVE_FOCUS = "javascript:quill.blur();";
+        //给上传接口设置token
+        public static final String SESSION_STORAGE = "javascript:sessionStorage.setItem('authorization','%s');";
 
-        Activity context;
-
-        public JSInterface(Activity context) {
-            this.context = context;
+        /**
+         * 打印日志信息
+         *
+         * @param json
+         */
+        @JavascriptInterface
+        public void postMessage(String json){
+            Log.e("noah",json);
         }
 
+        /**
+         * 是否是粗体
+         *
+         * @param isBold
+         */
         @JavascriptInterface
-        public void postMessage(String json) {
-            Log.e("noah", json);
+        public void callBoldChange(boolean isBold){
+            isTextBold = isBold;
+            tvBold.getPaint().setFakeBoldText(isBold);
+            tvBold.postInvalidate();
         }
 
+        /**
+         * 焦点改变通知
+         *
+         * @param name
+         */
         @JavascriptInterface
-        public void selectPhoto() {
-            Log.e("noah", "选择图片");
+        public void callOnFocusChange(String name){
+            if("body".equals(name)){
+                runOnUiThread(() -> {
+                    mLayoutBottom.setVisibility(View.VISIBLE);
+                    mLayoutBottom.requestLayout();
+                });
+            } else{
+                runOnUiThread(() -> mLayoutBottom.setVisibility(View.GONE));
+            }
+        }
 
-            PictureSelector.create(context).openGallery(PictureMimeType.ofImage()).
-                    loadImageEngine(GlideEngine.createGlideEngine())//请参考演示GlideEngine.java
-                    .forResult(PictureConfig.CHOOSE_REQUEST);
+        /**
+         * 是否能够发布
+         *
+         * @param canPublish
+         */
+        @JavascriptInterface
+        public void callOnPublish(boolean canPublish){
+            Log.e("noah","callOnPublish=" + canPublish);
+        }
+
+        /**
+         * 编辑器内容改变
+         *
+         * @param coverUrl
+         * @param title
+         * @param html
+         */
+        @JavascriptInterface
+        public void callOnEditorChange(String coverUrl,String title,String html){
+            Log.e("noah","callOnEditorChange=" + html);
         }
     }
 

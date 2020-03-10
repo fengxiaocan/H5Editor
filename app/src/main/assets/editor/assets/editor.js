@@ -463,6 +463,23 @@ quill.ext = {
         quill.insertText(range.index, '\n', Quill.sources.USER);
         quill.insertEmbed(range.index + 1, 'image', { url: url, alt: alt, file: file}, Quill.sources.USER);
         quill.setSelection(range.index + 2, Quill.sources.SILENT);
+    },
+    //格式化为加粗
+    formatTextBold : function  (value) {
+        let format = quill.getFormat();
+        quill.format('bold',value,'user')
+    },
+    //获取加粗的状态
+    getBoldStatus : function  () {
+        let format = quill.getFormat();
+        native.cell({
+                    __action: 'editorOnEvent',
+                    event: 'bold-change',
+                    source: 'user',
+                    value: {
+                        bold: format.bold == true
+                    }
+                });
     }
 };
 //选择图片
@@ -595,9 +612,10 @@ $('#title-editor').on('focusin', function (event) {
 
 $('#title-editor').on('input', function (event) {
     let _this = $(this);
-    let length = _this.text().length;
+//    let length = _this.text().length;
+    length = getCharLength(_this.text());
     let tip = $('#title-tip');
-    if (length > 40) {
+    if (length >= 41) {
         tip.css('color', '#F58C8C');
         tip.text('已超出 ' + (length - 40) + ' 个字');
     } else {
@@ -775,9 +793,8 @@ let native = {
     cell: function (json) {
         // Android
         disposeAndroidJson(json)
+//        window.AndroidEditor.postMessage(JSON.stringify(json));
     },
     callback: function (json) {
-        // ...
-        disposeAndroidCallback(json)
     }
 };
