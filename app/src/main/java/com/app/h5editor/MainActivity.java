@@ -1,13 +1,11 @@
 package com.app.h5editor;
 
 import android.Manifest;
-import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -18,6 +16,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.box.libs.DebugBox;
 import com.luck.picture.lib.PictureSelector;
 import com.luck.picture.lib.config.PictureMimeType;
 import com.luck.picture.lib.entity.LocalMedia;
@@ -31,7 +30,7 @@ import static com.app.h5editor.MainActivity.JSInterface.REMOVE_FOCUS;
 /**
  * 编辑器网址:https://quilljs.com
  */
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity {
 
     private WebView mWebView;
     private TextView tvBold;
@@ -44,7 +43,10 @@ public class MainActivity extends AppCompatActivity{
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
+        DebugBox.init(getApplication());
+        new OverFrameLayout(this).attachActivity(this);
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
 
         initView();
@@ -54,7 +56,7 @@ public class MainActivity extends AppCompatActivity{
         }
 
         initData();
-
+        DebugBox.get().open();
     }
 
     private void initData(){
@@ -102,12 +104,10 @@ public class MainActivity extends AppCompatActivity{
                     ValueCallback<Uri[]> filePathCallback,
                     FileChooserParams fileChooserParams)
             {
-                Log.e("noah","getMode=" + fileChooserParams.getMode());
                 fileChooseCallback = filePathCallback;
                 PictureSelector.create(MainActivity.this).openGallery(PictureMimeType.ofImage()).
                         loadImageEngine(GlideEngine.createGlideEngine())//请参考演示GlideEngine.java
                                .forResult(result -> {
-                                   Log.e("noah","forResult");
                                    if(result == null || result.size() == 0){
                                        filePathCallback.onReceiveValue(new Uri[1]);
                                    } else{
@@ -130,7 +130,6 @@ public class MainActivity extends AppCompatActivity{
     protected void onResume(){
         super.onResume();
         if(fileChooseCallback != null){
-            Log.e("noah","onResume");
             fileChooseCallback.onReceiveValue(null);
         }
     }
@@ -159,12 +158,13 @@ public class MainActivity extends AppCompatActivity{
         //添加分割线
         tvLine.setOnClickListener(v -> mWebView.evaluateJavascript(INSER_DIVIDER,null));
         tvHide.setOnClickListener(v -> {
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.showSoftInput(mWebView,InputMethodManager.SHOW_FORCED);
-            imm.hideSoftInputFromWindow(mWebView.getWindowToken(),0); //强制隐藏键盘
+            //            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            //            imm.showSoftInput(mWebView,InputMethodManager.SHOW_FORCED);
+            //            imm.hideSoftInputFromWindow(mWebView.getWindowToken(),0); //强制隐藏键盘
             mWebView.evaluateJavascript(REMOVE_FOCUS,null);
-            mLayoutBottom.setVisibility(View.GONE);
+            //            mLayoutBottom.setVisibility(View.GONE);
         });
+
     }
 
     public class JSInterface{

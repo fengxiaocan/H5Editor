@@ -78,4 +78,10 @@
             android:text="收起"
             android:textColor="@color/picture_color_white" />
     </LinearLayout>
+
+    <View
+        android:layout_alignParentBottom="true"
+        android:background="@color/colorPrimary"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"/>
 </RelativeLayout>
